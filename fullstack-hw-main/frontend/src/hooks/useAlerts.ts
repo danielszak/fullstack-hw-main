@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { monitoringService } from "../services/monitoringService";
 import type { Alert } from "../types";
 
@@ -19,30 +19,45 @@ export function useAlerts(): AlertsState {
     lastUpdated: null,
   });
 
-  const refresh = useCallback(async () => {
-    try {
-      const alerts = await monitoringService.getAlerts();
-      setState({
-        alerts,
-        isLoading: false,
-        error: null,
-        lastUpdated: new Date(),
-      });
-    } catch (error: unknown) {
-      setState((current) => ({
-        ...current,
-        isLoading: false,
-        error:
-          error instanceof Error ? error.message : "Unable to load alerts.",
-      }));
-    }
-  }, []);
-
   useEffect(() => {
+    let isMounted = true;
+    let isRefreshing = false;
+
+    const refresh = async () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+
+      try {
+        const alerts = await monitoringService.getAlerts();
+        if (isMounted) {
+          setState({
+            alerts,
+            isLoading: false,
+            error: null,
+            lastUpdated: new Date(),
+          });
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          setState((current) => ({
+            ...current,
+            isLoading: false,
+            error:
+              error instanceof Error ? error.message : "Unable to load alerts.",
+          }));
+        }
+      } finally {
+        isRefreshing = false;
+      }
+    };
+
     void refresh();
     const intervalId = window.setInterval(() => void refresh(), POLL_INTERVAL_MS);
-    return () => window.clearInterval(intervalId);
-  }, [refresh]);
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   return state;
 }
