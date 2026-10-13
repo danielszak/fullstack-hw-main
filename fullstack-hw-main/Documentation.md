@@ -139,28 +139,32 @@ Controllers (`SensorController`, `SensorReadingController`, `AlertController`) h
 | `AlertService` | Publishes saved alerts to topic `alerts` (task 6). |
 | `SensorReadingListener` | `@KafkaListener` on topic `sensor-reading`. Calls `SensorReadingService.saveSensorReading`. |
 | `AlertKafkaListener` | `@KafkaListener` on topic `sensor-alerts`. Calls `AlertService.saveAlert`. |
-| `KafkaConfig` | Declares a `StringJsonMessageConverter`. |
+| `KafkaConfig` | Makes the producer serialise payloads with the application `ObjectMapper` (ISO timestamps, no type headers) and declares a `StringJsonMessageConverter` for the listeners. |
 
 **Decisions**
 
-- Producer values use Spring Kafka's `JsonSerializer` (type headers off), so `AlertDto` is sent as plain JSON. The consumers keep a `StringDeserializer` and the converter turns the JSON string into whichever DTO the listener method declares. That lets two listeners with different payload types share one consumer configuration. A single `JsonDeserializer` with a fixed default type could not do that.
+- Producer values use Spring Kafka's `JsonSerializer` built on the application `ObjectMapper` (type headers off), so `AlertDto` is sent as plain JSON with ISO timestamps such as `2026-10-13T12:00:00`, the same format as the REST API. (The serializer's own default mapper writes dates as number arrays, which was caught by `KafkaMessagingTests`.) The consumers keep a `StringDeserializer` and the converter turns the JSON string into whichever DTO the listener method declares. That lets two listeners with different payload types share one consumer configuration. A single `JsonDeserializer` with a fixed default type could not do that.
 - Listeners and publisher are always active (not tied to a Spring profile), so the behaviour described in `TASKS.md` works in the default run configuration.
 - Listeners reuse the same service methods as HTTP, so validation and persistence are identical for both input paths.
 
 ## 1.9 Tests
 
-All of `backend/src/test` is driven by the task tests (`tasks/Task0Test` … `Task10Tests`).
+Tests use Testcontainers, so Docker is the only prerequisite (no local PostgreSQL or Kafka).
 
-- `IntegrationTestBase` starts the full application with the `docker` profile. `TestcontainersConfiguration` supplies a PostgreSQL 17.6 container via `@ServiceConnection`. Test data comes from `src/test/resources/sql/task-N-test-data.sql`.
-- `Task9Tests`, `Task10Tests` and `MeasurementCalculatorServiceTests` are plain unit tests.
-- Result at the time of writing: 38 tests, all passing.
+| Class | Containers | Covers |
+| --- | --- | --- |
+| `tasks/Task0Test` … `Task8Tests` | PostgreSQL 17.6 | The task acceptance tests. `IntegrationTestBase` starts the full application with the `docker` profile and `TestcontainersConfiguration` supplies the database via `@ServiceConnection`. Test data comes from `src/test/resources/sql/task-N-test-data.sql`. |
+| `tasks/Task9Tests`, `Task10Tests`, `MeasurementCalculatorServiceTests` | none | Plain unit tests for the calculator service. |
+| `RestApiTests` | PostgreSQL | The REST contract in 1.7: sorted sensor list without relation fields, 400/409 for invalid or duplicate sensors, readings saved and listed with `sensorId`, 404 for an unknown sensor, alerts newest first, `/alerts/latest` (200, 404, 400 for missing or malformed id). Kafka is mocked here. |
+| `KafkaMessagingTests` | PostgreSQL + Kafka (`confluentinc/cp-kafka:7.7.1`, KRaft) | A JSON message on `sensor-reading` becomes a stored reading; a JSON message on `sensor-alerts` becomes a stored alert; `POST /alerts` publishes JSON with an ISO timestamp to `alerts`. The broker address is injected with `@ServiceConnection`. |
+
+Result at the time of writing: 47 tests, all passing (`./mvnw test` in `backend/`).
 
 ## 1.10 Known limitations
 
 - `GET /sensor-readings` and `GET /alerts` are unbounded. For real data volumes they need pagination or time-window parameters.
 - Schema is created by Hibernate (`create-drop`) as the task requires. A real deployment would use migrations.
-- The `alerts` topic (published) and `sensor-alerts` topic (consumed) have different names, as given by the original skeleton. The publisher is not looped back into the consumer.
-- The Kafka listener path was not exercised end-to-end against a live broker in this review. The alert publish path was (saving an alert through `POST /alerts` succeeded and the producer connected). The listener parameter conversion is covered only by Spring's standard converter.
+- The `alerts` topic (published) and `sensor-alerts` topic (consumed) have different names, as given by the original skeleton. An alert consumed from `sensor-alerts` is saved through `AlertService.saveAlert`, so it is also published to `alerts`, but it is never fed back into `sensor-alerts`, so there is no loop.
 
 ---
 
