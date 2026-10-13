@@ -29,26 +29,22 @@ npm run preview
 ## Implementation and API assumptions
 
 The UI is split into route-level pages, reusable presentational components,
-stateful hooks, and a monitoring service. Types for sensors, readings, and
-alerts live in `src/types.ts`; the service currently uses seeded in-memory mock
-data in `src/services/mockData.ts`.
+stateful hooks, and an HTTP service (`src/services/monitoringService.ts`).
+Types for sensors, readings, and alerts live in `src/types.ts`.
 
-The backend currently exposes `POST /sensors` and `POST /sensor-readings`, but
-does not yet expose the `GET /sensors`, `GET /alerts`, or `GET /sensor-readings`
-collection endpoints expected by this dashboard. In addition, reading
-persistence is still a TODO in the backend service. As requested, **all
-dashboard data operations are mocked**: sensors and alerts are seeded locally,
-submitted readings stay in memory for the running browser session, and alerts
-are polled from the mock service every 15 seconds. No backend process or CORS
-configuration is required for the current demo.
+The dashboard talks to the Spring Boot backend (`../backend`, port 8080) using
+`GET /sensors`, `GET /alerts` and `POST /sensor-readings`. In development, Vite
+proxies `/api/*` to `http://localhost:8080/*`, so no CORS configuration is
+needed; set `VITE_API_BASE_URL` to call a different base URL. Start the
+backend first (`docker compose up -d` and `./mvnw spring-boot:run` in
+`../backend`); the database starts empty, so create a sensor with
+`POST /sensors` (`{"name": "...", "type": "TEMPERATURE"}`) before using the UI.
 
-The mock response shapes follow the task brief. Sensor IDs are strings,
-`type` is one of `TEMPERATURE`, `HUMIDITY`, or `ATMOSPHERIC_PRESSURE`, reading
-timestamps are date-time strings, and alerts refer to sensors by `sensorId`.
-The reading form sends the equivalent of
-`{ sensorId, value, timestamp }`. When the backend endpoints are ready, replace
-the implementation in `monitoringService.ts` with typed HTTP requests while
-keeping the component and hook contracts unchanged.
+Assumptions: `type` is one of `TEMPERATURE`, `HUMIDITY`, or
+`ATMOSPHERIC_PRESSURE`; timestamps are ISO local date-time strings without a
+zone (as the backend uses `LocalDateTime`); alerts refer to sensors by
+`sensorId`. Alerts are polled every 15 seconds and sorted newest first.
+Backend error messages (`message` field) are shown in the UI.
 
 ## High-frequency data
 
