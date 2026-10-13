@@ -1,39 +1,56 @@
 import type { Alert, NewSensorReading, Sensor, SensorReading } from "../types";
-import { alerts, readings, sensors } from "./mockData";
 
-let nextReadingId = 1;
+const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
-const delay = (milliseconds: number): Promise<void> =>
-  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "message" in body &&
+      typeof body.message === "string" &&
+      body.message !== ""
+    ) {
+      return body.message;
+    }
+  } catch {
+    // Non-JSON error body; fall through to the generic message.
+  }
+  return `The request failed (HTTP ${response.status}).`;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, init);
+  } catch {
+    throw new Error("Unable to reach the monitoring service.");
+  }
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+  return (await response.json()) as T;
+}
 
 export const monitoringService = {
-  async getSensors(): Promise<Sensor[]> {
-    await delay(120);
-    return sensors.map((sensor) => ({ ...sensor }));
+  getSensors(): Promise<Sensor[]> {
+    return request<Sensor[]>("/sensors");
   },
 
   async getAlerts(): Promise<Alert[]> {
-    await delay(120);
-    return alerts
-      .map((alert) => ({ ...alert }))
-      .sort(
-        (left, right) =>
-          new Date(right.timestamp).getTime() -
-          new Date(left.timestamp).getTime(),
-      );
+    const alerts = await request<Alert[]>("/alerts");
+    return [...alerts].sort(
+      (left, right) =>
+        new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
+    );
   },
 
-  async createReading(input: NewSensorReading): Promise<SensorReading> {
-    await delay(180);
-    if (!sensors.some((sensor) => sensor.id === input.sensorId)) {
-      throw new Error("The selected sensor could not be found.");
-    }
-
-    const reading: SensorReading = {
-      id: `reading-${nextReadingId++}`,
-      ...input,
-    };
-    readings.unshift(reading);
-    return { ...reading };
+  createReading(input: NewSensorReading): Promise<SensorReading> {
+    return request<SensorReading>("/sensor-readings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
   },
 };
