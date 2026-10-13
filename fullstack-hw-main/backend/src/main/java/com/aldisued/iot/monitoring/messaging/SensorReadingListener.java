@@ -3,9 +3,11 @@ package com.aldisued.iot.monitoring.messaging;
 import com.aldisued.iot.monitoring.dto.SensorReadingDto;
 import com.aldisued.iot.monitoring.service.SensorReadingService;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("kafka")
 public class SensorReadingListener {
   private final SensorReadingService sensorReadingService;
 
