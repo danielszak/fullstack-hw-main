@@ -2,7 +2,9 @@ package com.aldisued.iot.monitoring.service;
 
 import com.aldisued.iot.monitoring.dto.SensorDto;
 import com.aldisued.iot.monitoring.entity.Sensor;
+import com.aldisued.iot.monitoring.repository.SensorRepository;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -10,10 +12,10 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class SensorService {
 
-  private final MonitoringStore monitoringStore;
+  private final SensorRepository sensorRepository;
 
-  public SensorService(MonitoringStore monitoringStore) {
-    this.monitoringStore = monitoringStore;
+  public SensorService(SensorRepository sensorRepository) {
+    this.sensorRepository = sensorRepository;
   }
 
   public Sensor saveSensor(SensorDto sensor) {
@@ -23,10 +25,19 @@ public class SensorService {
     if (sensor.type() == null) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sensor type is required.");
     }
-    return monitoringStore.saveSensor(new Sensor(sensor.name().trim(), sensor.type()));
+    var name = sensor.name().trim();
+    if (sensorRepository.existsByName(name)) {
+      throw new SensorNameConflictException(name);
+    }
+    try {
+      return sensorRepository.save(new Sensor(name, sensor.type()));
+    } catch (DataIntegrityViolationException e) {
+      // Concurrent insert won the race on the unique name constraint.
+      throw new SensorNameConflictException(name);
+    }
   }
 
   public List<Sensor> findAllSensors() {
-    return monitoringStore.findAllSensors();
+    return sensorRepository.findAllByOrderByNameAsc();
   }
 }

@@ -89,16 +89,18 @@ public class Sensor {
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass()) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof Sensor sensor)) {
       return false;
     }
-    Sensor sensor = (Sensor) o;
-    return Objects.equals(id, sensor.id) && Objects.equals(name, sensor.name)
-        && type == sensor.type;
+    return Objects.equals(getId(), sensor.getId()) && Objects.equals(getName(), sensor.getName())
+        && getType() == sensor.getType();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, name, type);
+    return Objects.hash(getId(), getName(), getType());
   }
 }

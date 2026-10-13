@@ -73,15 +73,6 @@ public class SensorReading {
   }
 
   public void setSensor(Sensor sensor) {
-    if (this.sensor == sensor) {
-      return;
-    }
-    if (this.sensor != null) {
-      this.sensor.getSensorReadings().remove(this);
-    }
     this.sensor = sensor;
-    if (sensor != null && !sensor.getSensorReadings().contains(this)) {
-      sensor.getSensorReadings().add(this);
-    }
   }
 }

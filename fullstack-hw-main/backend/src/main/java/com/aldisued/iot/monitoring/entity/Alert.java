@@ -73,15 +73,6 @@ public class Alert {
   }
 
   public void setSensor(Sensor sensor) {
-    if (this.sensor == sensor) {
-      return;
-    }
-    if (this.sensor != null) {
-      this.sensor.getAlerts().remove(this);
-    }
     this.sensor = sensor;
-    if (sensor != null && !sensor.getAlerts().contains(this)) {
-      sensor.getAlerts().add(this);
-    }
   }
 }
