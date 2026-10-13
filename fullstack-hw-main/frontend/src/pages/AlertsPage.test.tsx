@@ -18,7 +18,7 @@ describe("AlertsPage", () => {
       .spyOn(monitoringService, "getAlerts")
       .mockResolvedValueOnce([
         {
-          id: "alert-001",
+          id: 1,
           sensorId: "sensor-001",
           message: "Initial alert",
           timestamp: "2026-10-09T10:00:00Z",
@@ -48,13 +48,13 @@ describe("AlertsPage", () => {
     await act(async () => {
       resolveSecondPoll([
         {
-          id: "alert-002",
+          id: 2,
           sensorId: "sensor-001",
           message: "New alert from polling",
           timestamp: "2026-10-09T10:15:00Z",
         },
         {
-          id: "alert-001",
+          id: 1,
           sensorId: "sensor-001",
           message: "Initial alert",
           timestamp: "2026-10-09T10:00:00Z",

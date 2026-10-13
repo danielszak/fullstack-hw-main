@@ -13,7 +13,7 @@ export interface Sensor {
 }
 
 export interface SensorReading {
-  id: string;
+  id: number;
   sensorId: string;
   value: number;
   timestamp: string;
@@ -26,7 +26,7 @@ export interface NewSensorReading {
 }
 
 export interface Alert {
-  id: string;
+  id: number;
   sensorId: string;
   message: string;
   timestamp: string;

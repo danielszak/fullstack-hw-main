@@ -33,7 +33,7 @@ describe("SensorReadingForm", () => {
     const createReading = vi
       .spyOn(monitoringService, "createReading")
       .mockResolvedValue({
-        id: "reading-test",
+        id: 1,
         sensorId: sensor.id,
         value: 22.4,
         timestamp: "2026-10-09T12:30",
