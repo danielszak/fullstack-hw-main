@@ -2,12 +2,10 @@ package com.aldisued.iot.monitoring.messaging;
 
 import com.aldisued.iot.monitoring.dto.AlertDto;
 import com.aldisued.iot.monitoring.service.AlertService;
-import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("kafka")
 public class AlertKafkaListener {
   private final AlertService alertService;
 
